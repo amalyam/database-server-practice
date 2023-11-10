@@ -15,6 +15,11 @@ let data = new Map();
 const server = http.createServer((req, res) => {
   const url = new URL(req.url ?? "", "http://localhost");
   const params = url.searchParams;
+  let response: {
+    key?: string;
+    value?: string;
+    message?: string;
+  } = {};
 
   switch (url.pathname) {
     case "/set":
@@ -23,33 +28,38 @@ const server = http.createServer((req, res) => {
         keyName = key;
         data.set(key, value);
       });
-      if (data.get(keyName)) {
+
+      if (data.has(keyName)) {
         res.statusCode = 200;
-        res.setHeader("Content-Type", "application/json");
-        res.write(JSON.stringify("Key and value stored"));
-        return res.end();
+        response = {
+          message: "Key and value stored",
+          key: keyName,
+          value: data.get(keyName),
+        };
       } else {
         res.statusCode = 422;
-        res.setHeader("Content-Type", "application/json");
-        res.write(JSON.stringify("Error: key and value not stored"));
-        return res.end();
+        response = { message: "Error: key and value not stored" };
       }
       break;
     case "/get":
-      if (data.get(params.get("key"))) {
+      const key = params.get("key") || undefined;
+      if (data.has(key)) {
         res.statusCode = 200;
-        res.setHeader("Content-Type", "application/json");
-        res.write(JSON.stringify(data.get(params.get("key"))));
-        console.log(data.get(params.get("key")));
+        response = {
+          message: "Key and value found",
+          key,
+          value: data.get(key),
+        };
       } else {
         res.statusCode = 400;
-        res.setHeader("Content-Type", "application/json");
-        res.write(JSON.stringify("Key not found"));
-        console.log(data.get(params.get("key")));
+        response = { message: "Error: key not found", key };
       }
-      return res.end();
       break;
   }
+
+  res.setHeader("Content-Type", "application/json");
+  res.write(JSON.stringify(response));
+  return res.end();
 });
 
 const port = 4000;
